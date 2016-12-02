@@ -1,33 +1,32 @@
-%computing error depends on epochs
+%computing error withlights
 
 clear all;
 close all ;
 
 p = 10; % samples
-pp =9; % view point 
-l=12;
+pp =9; % view point(titt angles)
+l=12; % number of lights directions 
 folder_set = {'011', '016', '021', '022', '033', '036', '038', '053', '059', '092'};
 
 count =1;
 values=[];
 objects=[];
 view=[];
-author = 'yoon';
-type = 3; %training data 2~4
-d = '2510';
-model ='DCGAN.model-96000'; %'DCGAN.model-36000'
-outputpath ='/research2/ECCV_journal/with_light/NIR_single_MSE_ang_hinge_3';
-suboutputpath ='L2_ang_scale_lights_result';
+
+
+model ='DCGAN.model-51612';
+outputpath ='/research2/ECCV_journal/deconv/NIR_single_dis';
+suboutputpath ='Deconv_L1_result';
 normalpath = '/research2/IR_normal_small/save';
 maskpath = '/research2/IR_normal_small/mask';
-fileID = fopen(sprintf('~/Dropbox/ECCV_result/light_fixed/with_light/nodetail_lights_%d_%s.csv',type,model),'w');
-fileID2 = fopen(sprintf('~/Dropbox/ECCV_result/light_fixed/with_light/nodetail_light_%d_%s.csv',type,model),'w');
+fileID = fopen(sprintf('~/Dropbox/ECCV_result/deconv/nodetail_2D_pair.csv'),'w'); %show Total mean etc 
+fileID2 = fopen(sprintf('~/Dropbox/ECCV_result/deconv/nodetail_2D_pair.csv'),'w'); %show depends on lights 
 
-fprintf(fileID,'mean_error,mean_angle_error,10deg\n');
+fprintf(fileID,'mean_error,median_error,mean_angle_error,10deg\n');
 fprintf(fileID2,'mean_error,median_error,mean_angle_error,10deg\n');
-epochs = dir(fullfile(outputpath,suboutputpath,'011/1',model,'*.bmp'));
-epochs = sort({epochs.name});
-epochs = natsort(epochs);
+lights = dir(fullfile(outputpath,suboutputpath,'011/1',model,'*.bmp'));
+lights = sort({lights.name});
+lights = natsort(lights);
 
 aloss_total = 0;
 aloss_total2 = 0;
@@ -47,24 +46,20 @@ abs_median=zeros(l,1);
 ang_loss=zeros(l,1);
 deg_10=zeros(l,1);
 
-loaded = false;  
-for i = 1: p %object
-    folder = fullfile(folder_set{i});
-    for j=1:pp % tilt
-        
-        for e =1:length(epochs) % lights
-            sprintf('Processsing object:%d/%d tilt: %d/%d lights: %d/%d \n',i,p,j,pp,e,length(epochs))
-            
+loaded = false;
+for e =1:length(lights) % lights
+    for i = 1: p %object
+        folder = fullfile(folder_set{i});
+        for j=1:pp % tilt
+            sprintf('Processsing object:%d/%d tilt: %d/%d lights: %d/%d \n',i,p,j,pp,e,length(lights))         
             im1 = im2double(imread(sprintf('%s%s%s%d%s%s',normalpath,folder,'/',j,'/','12_Normal.bmp')));
             im1 = imresize(im1,0.5);
             im1 = im1.*2-1;
             mask = imread(sprintf('%s%s%s%s%d%s',maskpath,'/',folder,'/',j,'/mask.bmp'));
             mask = imresize(mask,0.5);
             n = sum(sum(mask));
-            
-            
-            
-            im2 = im2double(imread(fullfile(outputpath,sprintf('%s/%s',suboutputpath,folder),int2str(j),model,epochs{e})));
+          
+            im2 = im2double(imread(fullfile(outputpath,sprintf('%s/%s',suboutputpath,folder),int2str(j),model,lights{e})));
             im2 = im2.*2-1;
             %%%%% Mean Error%%%%%
             im1_ = im1.*repmat(mask,1,1,3);
@@ -114,7 +109,7 @@ for i = 1: p %object
             aloss = sum(ang_rad_m(:))./sum(mask(:));
             aloss_total = aloss_total+aloss;
             ang_loss(e) = ang_loss(e) + aloss;
-
+            
             tmp2 = ang_rad_m(ang_rad_m~=0);
             aloss_median = median(tmp2);
             aloss_total2 = aloss_total2 + aloss_median;
@@ -129,21 +124,19 @@ for i = 1: p %object
             
             deg_10(e)  = deg_10(e) + A1;
             
-            if aloss > max_aloss
-                max_aloss = aloss;
-                max_class = folder_set{i};
-                max_tilt = j
-            end
-            
-            if min_aloss > aloss
-                min_aloss = aloss;
-                min_class =folder_set{i};
-                min_tilt = j;
-            end
+%             if aloss > max_aloss
+%                 max_aloss = aloss;
+%                 max_class = folder_set{i};
+%                 max_tilt = j
+%             end
+%             
+%             if min_aloss > aloss
+%                 min_aloss = aloss;
+%                 min_class =folder_set{i};
+%                 min_tilt = j;
+%             end
         end
     end
-    
-    
 end
 
  
@@ -156,32 +149,32 @@ end
  A3_total_mean = A3_total/(p*pp*l);
  
  abs_mean= abs_mean/(p*pp);
-abs_median=abs_median/(p*pp);
-ang_loss= ang_loss/(p*pp);
-deg_10=deg_10/(p*pp);
+ abs_median=abs_median/(p*pp); 
+ ang_loss= ang_loss/(p*pp);
+ deg_10=deg_10/(p*pp);
  
  fprintf(fileID,'%.6f, %.6f,%.6f\n',err_total_mean,aloss_total_mean,A1_total_mean);
  fclose(fileID);
  
  
- for nn= 1:12
+ for nn= 1:12 %lights
     fprintf(fileID2,'%.6f, %.6f,%.6f,%.6f\n',abs_mean(nn),abs_median(nn),ang_loss(nn),deg_10(nn));
  end
   fclose(fileID2);
 fclose('all');
  
  
-disp(['Mean of Absolute Error is ' num2str(err_total_mean)]);
-disp(['Median of Absolute Error is ' num2str(err_total_median)]);
-
-disp(['Mean of Angular Error is ' num2str(aloss_total_mean)]);
-disp(['Median of Angular Error is ' num2str(aloss_total_median)]);
-disp(['Max angular error  ' num2str(max_aloss)]);
-disp(['Min angular error  ' num2str(min_aloss)]);
-
-disp(['Ratio within 10 deg ' num2str(A1_total_mean)]);
-disp(['Ratio within 15 deg ' num2str(A2_total_mean)]);
-disp(['Ratio within 20 deg ' num2str(A3_total_mean)]);
+% disp(['Mean of Absolute Error is ' num2str(err_total_mean)]);
+% disp(['Median of Absolute Error is ' num2str(err_total_median)]);
+% 
+% disp(['Mean of Angular Error is ' num2str(aloss_total_mean)]);
+% disp(['Median of Angular Error is ' num2str(aloss_total_median)]);
+% disp(['Max angular error  ' num2str(max_aloss)]);
+% disp(['Min angular error  ' num2str(min_aloss)]);
+% 
+% disp(['Ratio within 10 deg ' num2str(A1_total_mean)]);
+% disp(['Ratio within 15 deg ' num2str(A2_total_mean)]);
+% disp(['Ratio within 20 deg ' num2str(A3_total_mean)]);
 
 
 
