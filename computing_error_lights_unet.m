@@ -14,13 +14,13 @@ objects=[];
 view=[];
 
 
-model ='DCGAN.model-6750';
-outputpath ='/research2/ECCV_journal/deconv/NIR_single_dis';
+model ='DCGAN.model-7650';
+outputpath ='/research2/ECCV_journal/deconv/Unet';
 suboutputpath ='Deconv_L1_result';
-normalpath = '/research2/IR_normal_small/save';
+normalpath = '/research2/ECCV_dataset_resized/save';
 maskpath = '/research2/IR_normal_small/mask';
 
-fileID = fopen(sprintf('~/Dropbox/ECCV_result/deconv/nodetail_2D_pair_lights.csv'),'w');
+fileID = fopen(sprintf('~/Dropbox/ECCV_result/deconv/nodetail_Unet_pair_lights.csv'),'w');
 
 fprintf(fileID,'Lights,mean_error,median_error,mean_angle_error,10deg\n');
 lights = dir(fullfile(outputpath,suboutputpath,'011/1',model,'*.bmp'));
@@ -52,10 +52,10 @@ for e =1:length(lights) % lights
         for j=1:pp % tilt
             sprintf('Processsing object:%d/%d tilt: %d/%d lights: %d/%d \n',i,p,j,pp,e,length(lights))         
             im1 = im2double(imread(sprintf('%s%s%s%d%s%s',normalpath,folder,'/',j,'/','12_Normal.bmp')));
-            im1 = imresize(im1,0.5);
             im1 = im1.*2-1;
-            mask = imread(sprintf('%s%s%s%s%d%s',maskpath,'/',folder,'/',j,'/mask.bmp'));
-            mask = imresize(mask,0.5);
+            mask = im2bw(im1,0.05) ;
+            %mask = imread(sprintf('%s%s%s%s%d%s',maskpath,'/',folder,'/',j,'/mask.bmp'));
+            %mask = imresize(mask,0.5);
             n = sum(sum(mask));
           
             im2 = im2double(imread(fullfile(outputpath,sprintf('%s/%s',suboutputpath,folder),int2str(j),model,lights{e})));
